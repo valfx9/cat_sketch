@@ -13,6 +13,10 @@
     --icing-shade: #e186ab;
     --ink: #2a1c10;
     --podium-red: #b23a3a;
+    --platform: #d8b98a;
+    --platform-shade: #b5936a;
+    --trunk: #8a6b4a;
+    --wall: #090a1a;
   }
 
   * { box-sizing: border-box; }
@@ -151,14 +155,115 @@
       animation: none !important;
     }
   }
+
+  .score-ui {
+    position: absolute;
+    top: 0.75rem;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    color: var(--cream);
+    font-weight: 700;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .score-ui .score-label {
+    margin: 0;
+    font-size: 0.7rem;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    opacity: 0.7;
+  }
+
+  .score-ui .score-value {
+    margin: 0;
+    font-size: clamp(1.8rem, 4vw, 2.6rem);
+    color: var(--spotlight);
+    line-height: 1.1;
+  }
+
+  .score-ui .best-value {
+    margin: 0;
+    font-size: 0.8rem;
+    opacity: 0.7;
+  }
+
+  .score-ui .best-value span {
+    color: var(--cream);
+    font-weight: 800;
+  }
+
+  .game-over {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(12, 13, 28, 0.72);
+    z-index: 3;
+  }
+
+  .game-over.visible {
+    display: flex;
+  }
+
+  .game-over-card {
+    text-align: center;
+    color: var(--cream);
+  }
+
+  .game-over-title {
+    margin: 0 0 0.6rem;
+    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    color: var(--spotlight);
+  }
+
+  .game-over-score, .game-over-best {
+    margin: 0.15rem 0;
+    font-size: 1.1rem;
+  }
+
+  .game-over-hint {
+    margin: 0.85rem 0 0;
+    font-size: 0.8rem;
+    opacity: 0.7;
+  }
 </style>
 
 <div class="stage">
   <div class="scene-wrap" tabindex="0">
     <div class="spotlight-glow"></div>
 
-    <svg viewBox="0 0 1200 900" role="img" aria-label="A cartoon cat balancing a frosted donut on its head">
-      <g transform="translate(400, 458)">
+    <div class="score-ui">
+      <p class="score-label">Height</p>
+      <p class="score-value" id="scoreValue">0</p>
+      <p class="best-value">Best <span id="bestValue">0</span></p>
+    </div>
+
+    <div class="game-over" id="gameOverOverlay">
+      <div class="game-over-card">
+        <p class="game-over-title">Game Over</p>
+        <p class="game-over-score">Height: <span id="finalScore">0</span></p>
+        <p class="game-over-best">Best: <span id="finalBest">0</span></p>
+        <p class="game-over-hint">Press Space to try again</p>
+      </div>
+    </div>
+
+    <svg viewBox="0 0 1200 900" role="img" aria-label="A cartoon cat balancing a frosted donut on a procedural cat tower">
+      <g id="world" transform="translate(400, 220)">
+      <rect x="-3370" y="-99700" width="3000" height="100030" fill="var(--wall)" opacity="0.55" />
+      <rect x="770" y="-99700" width="3000" height="100030" fill="var(--wall)" opacity="0.55" />
+
+      <rect id="towerTrunk" x="185" y="330" width="30" height="0" fill="var(--trunk)" />
+      <g id="platforms">
+        <g id="poles"></g>
+        <g id="shelves"></g>
+      </g>
+
       <ellipse cx="200" cy="392" rx="570" ry="16" fill="#000" opacity="0.35" />
 
       <g>
@@ -263,6 +368,7 @@
 
 <script>
   (function () {
+    var worldEl = document.getElementById('world');
     var catRig = document.getElementById('catRig');
     var donut = document.getElementById('donut');
     var shadow = document.getElementById('donutShadow');
@@ -271,19 +377,48 @@
     var tailFlipEl = document.getElementById('tailFlip');
     var earLeftEl = document.querySelector('.ear-left');
     var earRightEl = document.querySelector('.ear-right');
+    var polesGroup = document.getElementById('poles');
+    var shelvesGroup = document.getElementById('shelves');
+    var trunkEl = document.getElementById('towerTrunk');
+    var scoreValueEl = document.getElementById('scoreValue');
+    var bestValueEl = document.getElementById('bestValue');
+    var finalScoreEl = document.getElementById('finalScore');
+    var finalBestEl = document.getElementById('finalBest');
+    var overlayEl = document.getElementById('gameOverOverlay');
+
     var facingLeft = false, facingLeftPrev = false;
 
-    var CAT_MIN_X = -488, CAT_MAX_X = 488, CAT_SPEED = 9;
-    var catX = 0;
+    var CAT_MIN_X = -488, CAT_MAX_X = 488, CAT_SPEED = 9, CAT_HALF_WIDTH = 60;
+    var GRAVITY_CAT = 0.32, JUMP_VY = -16, JUMP_BOOST_FACTOR = 0.09;
+    var HEAD_OFFSET = 208;
     var keys = { left: false, right: false };
 
     var DONUT_RADIUS = 30;
-    var WALL_LEFT = -370, WALL_RIGHT = 770, CEILING = -428, FLOOR = 328 - DONUT_RADIUS;
-    var PADDLE_Y = 122, PADDLE_HALF_WIDTH = 58, ANTICIPATE_DIST = 170;
-    var GRAVITY = 0.12, BOUNCE_VY = -9.2, FLOOR_DAMPING = 0.7;
+    var WALL_LEFT = -370, WALL_RIGHT = 770;
+    var PADDLE_HALF_WIDTH = 58, ANTICIPATE_DIST = 170;
+    var GRAVITY = 0.08, BOUNCE_VY = -7.0;
+    var FALL_OUT_MARGIN = 130, GAME_OVER_DELAY = 1000;
+    var CROUCH_MIN = 0.85, STRETCH_PEAK = 1.12;
 
-    var donutX = 200, donutY = 122, donutVX = 1.5, donutVY = 0, donutRotation = 0;
+    var PEDESTAL = { x: 200, y: 330, halfWidth: 550 };
+    var LEVEL_GAP = 160, PLATFORM_MIN_HW = 55, PLATFORM_MAX_HW = 95, BRANCH_CHANCE = 0.28;
+    var ARENA_LEFT = -130, ARENA_RIGHT = 530;
+    var CENTER_SCREEN_Y = 460, CAT_ANCHOR_OFFSET = 90, CAMERA_EASE = 0.12;
+
+    var catX = 0, catFeetY = 330, catVY = 0, catGrounded = true;
+    var donutX = 200, donutY = 122, donutVX = 1.0, donutVY = 0, donutRotation = 0;
     var bodyScaleY = 1;
+    var donutSquashY = 1;
+    var cameraDY = 220;
+    var lastLevelPlatforms = [PEDESTAL];
+    var fallTriggered = false;
+    var platforms = [];
+    var highestGeneratedY = 330;
+    var score = 0;
+    var bestScore = parseInt(localStorage.getItem('donutBounceHighScore') || '0', 10);
+    var gameOver = false;
+
+    bestValueEl.textContent = bestScore;
 
     function pulse(el, cls, duration) {
       el.classList.remove(cls);
@@ -293,84 +428,267 @@
       el._pulseTimer = setTimeout(function () { el.classList.remove(cls); }, duration);
     }
 
-    function setKey(e, down) {
-      if (e.key === 'ArrowLeft') { keys.left = down; e.preventDefault(); }
-      else if (e.key === 'ArrowRight') { keys.right = down; e.preventDefault(); }
+    function findSupport(x, candidates) {
+      for (var i = 0; i < candidates.length; i++) {
+        var c = candidates[i];
+        if (Math.abs(x - c.x) < c.halfWidth) return c;
+      }
+      return null;
     }
-    window.addEventListener('keydown', function (e) { setKey(e, true); });
-    window.addEventListener('keyup', function (e) { setKey(e, false); });
+
+    function spawnPlatform(x, y, hw, support) {
+      var els = [];
+
+      if (support) {
+        var pole = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        pole.setAttribute('x1', x);
+        pole.setAttribute('y1', y);
+        pole.setAttribute('x2', x);
+        pole.setAttribute('y2', support.y);
+        pole.setAttribute('stroke', 'var(--trunk)');
+        pole.setAttribute('stroke-width', '8');
+        pole.setAttribute('stroke-linecap', 'round');
+        pole.setAttribute('opacity', '0.85');
+        polesGroup.appendChild(pole);
+        els.push(pole);
+      }
+
+      var branch = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      branch.setAttribute('x1', x);
+      branch.setAttribute('y1', y);
+      branch.setAttribute('x2', 200);
+      branch.setAttribute('y2', y);
+      branch.setAttribute('stroke', 'var(--trunk)');
+      branch.setAttribute('stroke-width', '10');
+      branch.setAttribute('stroke-linecap', 'round');
+      polesGroup.appendChild(branch);
+      els.push(branch);
+
+      var rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      rect.setAttribute('x', x - hw);
+      rect.setAttribute('y', y - 9);
+      rect.setAttribute('width', hw * 2);
+      rect.setAttribute('height', 18);
+      rect.setAttribute('rx', 8);
+      rect.setAttribute('fill', 'var(--platform)');
+      shelvesGroup.appendChild(rect);
+      els.push(rect);
+
+      var edge = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      edge.setAttribute('x', x - hw);
+      edge.setAttribute('y', y - 9);
+      edge.setAttribute('width', hw * 2);
+      edge.setAttribute('height', 5);
+      edge.setAttribute('rx', 3);
+      edge.setAttribute('fill', 'var(--platform-shade)');
+      edge.setAttribute('opacity', '0.5');
+      shelvesGroup.appendChild(edge);
+      els.push(edge);
+
+      var entry = { x: x, y: y, halfWidth: hw, els: els };
+      platforms.push(entry);
+      return entry;
+    }
+
+    function generatePlatformsUpTo(targetY) {
+      while (highestGeneratedY > targetY) {
+        highestGeneratedY -= LEVEL_GAP;
+        var thisLevel = [];
+        var branchLevel = Math.random() < BRANCH_CHANCE;
+
+        var hw1 = PLATFORM_MIN_HW + Math.random() * (PLATFORM_MAX_HW - PLATFORM_MIN_HW);
+        var x1 = ARENA_LEFT + hw1 + Math.random() * (ARENA_RIGHT - ARENA_LEFT - hw1 * 2);
+        thisLevel.push(spawnPlatform(x1, highestGeneratedY, hw1, findSupport(x1, lastLevelPlatforms)));
+
+        if (branchLevel) {
+          var hw2 = PLATFORM_MIN_HW + Math.random() * (PLATFORM_MAX_HW - PLATFORM_MIN_HW);
+          var x2, tries = 0;
+          do {
+            x2 = ARENA_LEFT + hw2 + Math.random() * (ARENA_RIGHT - ARENA_LEFT - hw2 * 2);
+            tries++;
+          } while (Math.abs(x2 - x1) < (hw1 + hw2 + 70) && tries < 8);
+          thisLevel.push(spawnPlatform(x2, highestGeneratedY, hw2, findSupport(x2, lastLevelPlatforms)));
+        }
+
+        lastLevelPlatforms = thisLevel;
+      }
+      trunkEl.setAttribute('y', highestGeneratedY);
+      trunkEl.setAttribute('height', 330 - highestGeneratedY);
+    }
+
+    function prunePlatforms(belowY) {
+      platforms = platforms.filter(function (p) {
+        if (p.y > belowY) {
+          p.els.forEach(function (el) { el.remove(); });
+          return false;
+        }
+        return true;
+      });
+    }
+
+    function resolveCatLanding() {
+      if (catVY <= 0) return;
+      var prevY = catFeetY - catVY;
+      var absX = 200 + catX;
+      var candidates = [PEDESTAL].concat(platforms);
+      for (var i = 0; i < candidates.length; i++) {
+        var p = candidates[i];
+        if (catFeetY >= p.y && prevY <= p.y && Math.abs(absX - p.x) < p.halfWidth + CAT_HALF_WIDTH) {
+          catFeetY = p.y;
+          catVY = 0;
+          catGrounded = true;
+          return;
+        }
+      }
+    }
+
+    function resetGame() {
+      catX = 0; catFeetY = 330; catVY = 0; catGrounded = true;
+      donutX = 200; donutY = 122; donutVX = 1.0; donutVY = 0; donutRotation = 0;
+      bodyScaleY = 1;
+      donutSquashY = 1;
+      cameraDY = 220;
+      score = 0;
+      facingLeft = false; facingLeftPrev = false;
+      prunePlatforms(-Infinity);
+      highestGeneratedY = 330;
+      lastLevelPlatforms = [PEDESTAL];
+      trunkEl.setAttribute('y', 330);
+      trunkEl.setAttribute('height', 0);
+      worldEl.setAttribute('transform', 'translate(400,' + cameraDY + ')');
+      scoreValueEl.textContent = '0';
+      gameOver = false;
+      fallTriggered = false;
+      overlayEl.classList.remove('visible');
+    }
+
+    function triggerGameOver() {
+      gameOver = true;
+      if (score > bestScore) {
+        bestScore = score;
+        localStorage.setItem('donutBounceHighScore', String(bestScore));
+      }
+      finalScoreEl.textContent = score;
+      finalBestEl.textContent = bestScore;
+      bestValueEl.textContent = bestScore;
+      overlayEl.classList.add('visible');
+    }
+
+    window.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowLeft') { keys.left = true; e.preventDefault(); return; }
+      if (e.key === 'ArrowRight') { keys.right = true; e.preventDefault(); return; }
+      if (e.key === ' ' || e.code === 'Space') {
+        e.preventDefault();
+        if (e.repeat) return;
+        if (gameOver) { resetGame(); return; }
+        if (catGrounded) { catVY = JUMP_VY; catGrounded = false; }
+      }
+    });
+    window.addEventListener('keyup', function (e) {
+      if (e.key === 'ArrowLeft') { keys.left = false; e.preventDefault(); }
+      else if (e.key === 'ArrowRight') { keys.right = false; e.preventDefault(); }
+    });
     sceneWrap.addEventListener('click', function () { sceneWrap.focus(); });
 
     function step() {
-      if (keys.left) catX -= CAT_SPEED;
-      if (keys.right) catX += CAT_SPEED;
-      catX = Math.max(CAT_MIN_X, Math.min(CAT_MAX_X, catX));
+      if (!gameOver) {
+        if (keys.left) catX -= CAT_SPEED;
+        if (keys.right) catX += CAT_SPEED;
+        catX = Math.max(CAT_MIN_X, Math.min(CAT_MAX_X, catX));
 
-      donutVY += GRAVITY;
-      donutX += donutVX;
-      donutY += donutVY;
+        catVY += GRAVITY_CAT;
+        catFeetY += catVY;
+        resolveCatLanding();
+        if (catFeetY > PEDESTAL.y) { catFeetY = PEDESTAL.y; catVY = 0; catGrounded = true; }
 
-      if (donutX < WALL_LEFT) { donutX = WALL_LEFT; donutVX *= -1; }
-      if (donutX > WALL_RIGHT) { donutX = WALL_RIGHT; donutVX *= -1; }
-      if (donutY < CEILING) { donutY = CEILING; donutVY *= -1; }
+        var paddleY = catFeetY - HEAD_OFFSET;
 
-      var paddleCenterX = 200 + catX;
-      var withinPaddle = Math.abs(donutX - paddleCenterX) < PADDLE_HALF_WIDTH;
+        donutVY += GRAVITY;
+        donutX += donutVX;
+        donutY += donutVY;
 
-      if (donutX < paddleCenterX - PADDLE_HALF_WIDTH) {
-        facingLeft = true;
-      } else if (donutX > paddleCenterX + PADDLE_HALF_WIDTH) {
-        facingLeft = false;
-      }
-      if (facingLeft !== facingLeftPrev) {
-        pulse(tailEl, 'swish', 500);
-      }
-      facingLeftPrev = facingLeft;
-      tailFlipEl.setAttribute('transform', facingLeft ? 'translate(400,0) scale(-1,1)' : '');
+        if (donutX < WALL_LEFT) { donutX = WALL_LEFT; donutVX *= -1; }
+        if (donutX > WALL_RIGHT) { donutX = WALL_RIGHT; donutVX *= -1; }
 
-      var approaching = donutVY > 0 && withinPaddle &&
-        donutY >= PADDLE_Y - ANTICIPATE_DIST && donutY <= PADDLE_Y + 6;
-      if (approaching) {
-        var p = Math.min(1, Math.max(0, 1 - (PADDLE_Y - donutY) / ANTICIPATE_DIST));
-        if (p < 0.6) {
-          bodyScaleY = 1 - (p / 0.6) * 0.15;
-        } else {
-          bodyScaleY = 0.85 + ((p - 0.6) / 0.4) * 0.27;
+        var paddleCenterX = 200 + catX;
+        var withinPaddle = Math.abs(donutX - paddleCenterX) < PADDLE_HALF_WIDTH;
+
+        if (donutX < paddleCenterX - PADDLE_HALF_WIDTH) {
+          facingLeft = true;
+        } else if (donutX > paddleCenterX + PADDLE_HALF_WIDTH) {
+          facingLeft = false;
         }
-      } else {
-        bodyScaleY += (1 - bodyScaleY) * 0.1;
-      }
-      var bodyScaleX = 1 + (1 - bodyScaleY) * 0.3;
-      catRig.style.transform = 'translateX(' + catX + 'px) scaleY(' + bodyScaleY + ') scaleX(' + bodyScaleX + ')';
+        if (facingLeft !== facingLeftPrev) {
+          pulse(tailEl, 'swish', 500);
+        }
+        facingLeftPrev = facingLeft;
+        tailFlipEl.setAttribute('transform', facingLeft ? 'translate(400,0) scale(-1,1)' : '');
 
-      var flattenAmount = Math.max(0, (1 - bodyScaleY) / 0.15);
-      var earAngle = flattenAmount * 80;
-      earLeftEl.style.setProperty('--flatten', (-earAngle) + 'deg');
-      earRightEl.style.setProperty('--flatten', earAngle + 'deg');
+        var approaching = !fallTriggered && donutVY > 0 && withinPaddle &&
+          donutY >= paddleY - ANTICIPATE_DIST && donutY <= paddleY + 6;
+        if (approaching) {
+          var p = Math.min(1, Math.max(0, 1 - (paddleY - donutY) / ANTICIPATE_DIST));
+          if (p < 0.6) {
+            bodyScaleY = 1 - (p / 0.6) * (1 - CROUCH_MIN);
+          } else {
+            bodyScaleY = CROUCH_MIN + ((p - 0.6) / 0.4) * (STRETCH_PEAK - CROUCH_MIN);
+          }
+        } else {
+          bodyScaleY += (1 - bodyScaleY) * 0.1;
+        }
 
-      if (donutVY > 0 && donutY >= PADDLE_Y && withinPaddle) {
-        donutY = PADDLE_Y;
-        donutVY = BOUNCE_VY;
-        var offset = (donutX - paddleCenterX) / PADDLE_HALF_WIDTH;
-        donutVX += offset * 2.4;
-        donutVX = Math.max(-5, Math.min(5, donutVX));
+        var flattenAmount = Math.max(0, (1 - bodyScaleY) / (1 - CROUCH_MIN));
+        var earAngle = flattenAmount * 80;
+        earLeftEl.style.setProperty('--flatten', (-earAngle) + 'deg');
+        earRightEl.style.setProperty('--flatten', earAngle + 'deg');
 
-        pulse(tailEl, 'swish', 500);
-      } else if (donutVY > 0 && donutY >= FLOOR) {
-        donutY = FLOOR;
-        donutVY *= -FLOOR_DAMPING;
-      }
+        var visualPaddleY = catFeetY - HEAD_OFFSET * bodyScaleY;
 
-      if (donutY >= FLOOR - 40) {
+        if (!fallTriggered && donutVY > 0 && donutY >= visualPaddleY && withinPaddle) {
+          bodyScaleY = STRETCH_PEAK;
+          visualPaddleY = catFeetY - HEAD_OFFSET * bodyScaleY;
+          donutY = visualPaddleY;
+          donutVY = BOUNCE_VY + Math.min(0, catVY) * JUMP_BOOST_FACTOR;
+          var offset = (donutX - paddleCenterX) / PADDLE_HALF_WIDTH;
+          donutVX += offset * 2.0;
+          donutVX = Math.max(-4.2, Math.min(4.2, donutVX));
+
+          donutSquashY = 0.55;
+          pulse(tailEl, 'swish', 500);
+        }
+
+        var bodyScaleX = 1 + (1 - bodyScaleY) * 0.3;
+        catRig.style.transform = 'translate(' + catX + 'px,' + (catFeetY - 330) + 'px) scaleY(' + bodyScaleY + ') scaleX(' + bodyScaleX + ')';
+
+        donutSquashY += (1 - donutSquashY) * 0.3;
+        var donutSquashX = 1 + (1 - donutSquashY) * 0.5;
+
         donutRotation = (donutRotation + donutVX * (180 / Math.PI / DONUT_RADIUS)) % 360;
+        donut.style.transform = 'translate(' + (donutX - 200) + 'px, ' + (donutY - 122) + 'px) rotate(' + donutRotation + 'deg) scale(' + donutSquashX + ',' + donutSquashY + ')';
+
+        var t = 1 - Math.min(1, Math.abs(donutY - visualPaddleY) / 400);
+        var scale = 0.5 + t * 0.8;
+        shadow.style.transform = 'translate(' + (donutX - 200) + 'px,' + (visualPaddleY - 328) + 'px) scale(' + scale + ', ' + (scale * 0.4) + ')';
+        shadow.style.opacity = 0.15 + t * 0.4;
+
+        var height = Math.max(0, Math.round((122 - donutY) / 8));
+        if (height > score) {
+          score = height;
+          scoreValueEl.textContent = score;
+        }
+
+        generatePlatformsUpTo(catFeetY - 700);
+
+        var catAnchorY = catFeetY - CAT_ANCHOR_OFFSET;
+        var targetCameraDY = CENTER_SCREEN_Y - catAnchorY;
+        cameraDY += (targetCameraDY - cameraDY) * CAMERA_EASE;
+        worldEl.setAttribute('transform', 'translate(400,' + cameraDY + ')');
+
+        if (!fallTriggered && donutY > PEDESTAL.y + FALL_OUT_MARGIN) {
+          fallTriggered = true;
+          setTimeout(triggerGameOver, GAME_OVER_DELAY);
+        }
       }
-
-      donut.style.transform = 'translate(' + (donutX - 200) + 'px, ' + (donutY - 122) + 'px) rotate(' + donutRotation + 'deg)';
-
-      var t = Math.max(0, Math.min(1, (FLOOR - donutY) / (FLOOR - CEILING)));
-      var scale = 1.3 - t * 0.8;
-      shadow.style.transform = 'translateX(' + (donutX - 200) + 'px) scale(' + scale + ', ' + (scale * 0.4) + ')';
-      shadow.style.opacity = 0.55 - t * 0.4;
 
       requestAnimationFrame(step);
     }
