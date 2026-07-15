@@ -1,0 +1,314 @@
+
+<!-- saved from url=(0109)file:///C:/Valentina/Night%20Kitchen/1000_Internal/1677_Research_Development/cat_sketch/cat-ball-balance.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252"><title>Balancing Act</title>
+<style>
+  :root {
+    --stage: #14162c;
+    --stage-deep: #0c0d1c;
+    --spotlight: #ffdd8a;
+    --fur: #e8964f;
+    --fur-shade: #c26f30;
+    --cream: #fbf1e2;
+    --donut-dough: #c98a4b;
+    --donut-shade: #a06a34;
+    --icing: #f2a6c1;
+    --icing-shade: #e186ab;
+    --ink: #2a1c10;
+    --podium-red: #b23a3a;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--stage-deep);
+  }
+
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    overflow: hidden;
+    font-family: -apple-system, "Segoe UI", "SF Pro Rounded", Roboto, sans-serif;
+  }
+
+  .stage {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background:
+      radial-gradient(ellipse 60% 45% at 50% 42%, rgba(255, 221, 138, 0.16), transparent 70%),
+      linear-gradient(180deg, var(--stage) 0%, var(--stage-deep) 100%);
+  }
+
+  .scene-wrap {
+    position: relative;
+    width: 96vw;
+    height: 92vh;
+  }
+
+  .spotlight-glow {
+    position: absolute;
+    inset: -10%;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--spotlight) 0%, transparent 68%);
+    opacity: 0.14;
+    filter: blur(2px);
+    animation: glow 5s ease-in-out infinite alternate;
+    pointer-events: none;
+  }
+
+  svg { display: block; width: 100%; height: 100%; overflow: visible; }
+
+  .donut-group {
+    transform-box: fill-box;
+    transform-origin: 50% 50%;
+  }
+
+  .contact-shadow {
+    transform-box: fill-box;
+    transform-origin: 50% 50%;
+  }
+
+  .cat-rig {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+  }
+
+  .tail {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    animation: sway 2.6s ease-in-out infinite alternate;
+  }
+
+  .ear-left {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    animation: twitchLeft 5.2s ease-in-out infinite;
+  }
+
+  .ear-right {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    animation: twitchRight 5.2s ease-in-out infinite;
+    animation-delay: 0.15s;
+  }
+
+  .eyes {
+    transform-box: fill-box;
+    transform-origin: 50% 50%;
+    animation: blink 4.6s ease-in-out infinite;
+  }
+
+  @keyframes sway {
+    from { transform: rotate(-6deg); }
+    to   { transform: rotate(8deg); }
+  }
+
+  @keyframes twitchLeft {
+    0%, 82%, 100% { transform: rotate(0deg); }
+    86% { transform: rotate(-9deg); }
+    90% { transform: rotate(4deg); }
+    94% { transform: rotate(0deg); }
+  }
+
+  @keyframes twitchRight {
+    0%, 82%, 100% { transform: rotate(0deg); }
+    86% { transform: rotate(9deg); }
+    90% { transform: rotate(-4deg); }
+    94% { transform: rotate(0deg); }
+  }
+
+  @keyframes blink {
+    0%, 92%, 100% { transform: scaleY(1); }
+    95% { transform: scaleY(0.1); }
+  }
+
+  @keyframes glow {
+    from { opacity: 0.1; }
+    to   { opacity: 0.2; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tail, .ear-left, .ear-right, .eyes, .spotlight-glow {
+      animation: none !important;
+    }
+  }
+</style>
+
+</head><body><div class="stage">
+  <div class="scene-wrap" tabindex="0">
+    <div class="spotlight-glow"></div>
+
+    <svg viewBox="0 0 1200 900" role="img" aria-label="A cartoon cat balancing a frosted donut on its head">
+      <g transform="translate(400, 458)">
+      <ellipse cx="200" cy="392" rx="570" ry="16" fill="#000" opacity="0.35"></ellipse>
+
+      <g>
+        <rect x="-350" y="330" width="1100" height="46" rx="10" fill="var(--podium-red)"></rect>
+        <rect x="-350" y="330" width="1100" height="10" fill="var(--cream)" opacity="0.9"></rect>
+        <rect x="-350" y="352" width="1100" height="8" fill="var(--cream)" opacity="0.35"></rect>
+        <ellipse cx="200" cy="330" rx="550" ry="14" fill="var(--cream)"></ellipse>
+        <ellipse cx="200" cy="330" rx="550" ry="14" fill="none" stroke="var(--ink)" stroke-width="2" opacity="0.15"></ellipse>
+      </g>
+
+      <g id="catRig" class="cat-rig" style="transform: translateX(-34px);">
+        <path class="tail" d="M 258 300 C 300 290, 320 250, 300 210 C 292 194, 274 190, 268 202" fill="none" stroke="var(--fur)" stroke-width="18" stroke-linecap="round"></path>
+        <path d="M 258 300 C 300 290, 320 250, 300 210 C 292 194, 274 190, 268 202" fill="none" stroke="var(--fur-shade)" stroke-width="4" stroke-linecap="round" opacity="0.5"></path>
+
+        <path d="M 130 330
+                 C 128 270, 140 224, 200 220
+                 C 260 224, 272 270, 270 330 Z" fill="var(--fur)"></path>
+
+        <ellipse cx="168" cy="322" rx="15" ry="11" fill="var(--cream)"></ellipse>
+        <ellipse cx="232" cy="322" rx="15" ry="11" fill="var(--cream)"></ellipse>
+
+        <path d="M 160 250 Q 200 268 240 250 L 236 290 Q 200 302 164 290 Z" fill="var(--cream)" opacity="0.9"></path>
+        <path d="M 150 235 Q 155 245 165 240" stroke="var(--fur-shade)" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.6"></path>
+        <path d="M 250 235 Q 245 245 235 240" stroke="var(--fur-shade)" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.6"></path>
+
+        <g class="ear-right">
+          <path d="M 238 176 L 272 122 L 252 182 Z" fill="var(--fur)"></path>
+          <path d="M 246 168 L 262 138 L 252 172 Z" fill="var(--cream)" opacity="0.85"></path>
+        </g>
+        <g class="ear-left">
+          <path d="M 162 176 L 128 122 L 148 182 Z" fill="var(--fur)"></path>
+          <path d="M 154 168 L 138 138 L 148 172 Z" fill="var(--cream)" opacity="0.85"></path>
+        </g>
+
+        <circle cx="200" cy="185" r="62" fill="var(--fur)"></circle>
+
+        <path d="M 152 158 Q 148 150 156 144" stroke="var(--fur-shade)" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.55"></path>
+        <path d="M 248 158 Q 252 150 244 144" stroke="var(--fur-shade)" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.55"></path>
+
+        <ellipse cx="200" cy="210" rx="34" ry="24" fill="var(--cream)"></ellipse>
+
+        <g class="eyes">
+          <ellipse cx="178" cy="182" rx="10" ry="12" fill="var(--ink)"></ellipse>
+          <ellipse cx="222" cy="182" rx="10" ry="12" fill="var(--ink)"></ellipse>
+          <circle cx="181" cy="177" r="3" fill="var(--cream)"></circle>
+          <circle cx="225" cy="177" r="3" fill="var(--cream)"></circle>
+        </g>
+
+        <path d="M 194 200 L 206 200 L 200 208 Z" fill="#e8788f"></path>
+
+        <g stroke="var(--ink)" stroke-width="2" opacity="0.55" stroke-linecap="round">
+          <path d="M 150 205 L 110 198"></path>
+          <path d="M 150 213 L 108 214"></path>
+          <path d="M 150 221 L 110 230"></path>
+          <path d="M 250 205 L 290 198"></path>
+          <path d="M 250 213 L 292 214"></path>
+          <path d="M 250 221 L 290 230"></path>
+        </g>
+      </g>
+
+      <ellipse id="donutShadow" class="contact-shadow" cx="200" cy="328" rx="30" ry="8" fill="var(--ink)" opacity="0.4" style="transform: translateX(70.5823px) scale(1.3, 0.52); opacity: 0.55;"></ellipse>
+
+      <g id="donut" class="donut-group" style="transform: translate(70.5823px, 206px);">
+        <circle cx="200" cy="122" r="30" fill="var(--donut-dough)"></circle>
+        <circle cx="200" cy="122" r="30" fill="none" stroke="var(--donut-shade)" stroke-width="2" opacity="0.25"></circle>
+
+        <path d="M 174 116
+                 C 174 97 186 91 200 91
+                 C 214 91 226 97 226 116
+                 C 226 122 222 129 218 121
+                 C 216 116 212 116 210 125
+                 C 208 133 204 133 202 123
+                 C 200 114 196 114 194 123
+                 C 192 133 188 133 186 125
+                 C 184 116 180 116 178 121
+                 C 176 129 174 122 174 116 Z" fill="var(--icing)"></path>
+        <path d="M 174 116
+                 C 174 97 186 91 200 91
+                 C 214 91 226 97 226 116" fill="none" stroke="var(--icing-shade)" stroke-width="2" opacity="0.4" stroke-linecap="round"></path>
+
+        <g stroke-linecap="round">
+          <line x1="184" y1="101" x2="188" y2="97" stroke="#5fc3d8" stroke-width="3"></line>
+          <line x1="196" y1="97" x2="196" y2="102" stroke="#f4e04d" stroke-width="3"></line>
+          <line x1="208" y1="98" x2="212" y2="102" stroke="#7fd68a" stroke-width="3"></line>
+          <line x1="218" y1="106" x2="222" y2="110" stroke="#f4e04d" stroke-width="3"></line>
+          <line x1="180" y1="109" x2="176" y2="113" stroke="#7fd68a" stroke-width="3"></line>
+          <line x1="204" y1="104" x2="204" y2="109" stroke="#5fc3d8" stroke-width="3"></line>
+        </g>
+
+        <circle cx="200" cy="123" r="10" fill="var(--stage-deep)"></circle>
+        <circle cx="200" cy="123" r="10" fill="none" stroke="var(--donut-shade)" stroke-width="2" opacity="0.5"></circle>
+      </g>
+      </g>
+    </svg>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var catRig = document.getElementById('catRig');
+    var donut = document.getElementById('donut');
+    var shadow = document.getElementById('donutShadow');
+    var sceneWrap = document.querySelector('.scene-wrap');
+
+    var CAT_MIN_X = -488, CAT_MAX_X = 488, CAT_SPEED = 9;
+    var catX = 0;
+    var keys = { left: false, right: false };
+
+    var WALL_LEFT = -370, WALL_RIGHT = 770, CEILING = -428, FLOOR = 328;
+    var PADDLE_Y = 122, PADDLE_HALF_WIDTH = 58;
+    var GRAVITY = 0.12, BOUNCE_VY = -9.2, FLOOR_DAMPING = 0.7;
+
+    var donutX = 200, donutY = 122, donutVX = 1.5, donutVY = 0;
+
+    function setKey(e, down) {
+      if (e.key === 'ArrowLeft') { keys.left = down; e.preventDefault(); }
+      else if (e.key === 'ArrowRight') { keys.right = down; e.preventDefault(); }
+    }
+    window.addEventListener('keydown', function (e) { setKey(e, true); });
+    window.addEventListener('keyup', function (e) { setKey(e, false); });
+    sceneWrap.addEventListener('click', function () { sceneWrap.focus(); });
+
+    function step() {
+      if (keys.left) catX -= CAT_SPEED;
+      if (keys.right) catX += CAT_SPEED;
+      catX = Math.max(CAT_MIN_X, Math.min(CAT_MAX_X, catX));
+      catRig.style.transform = 'translateX(' + catX + 'px)';
+
+      donutVY += GRAVITY;
+      donutX += donutVX;
+      donutY += donutVY;
+
+      if (donutX < WALL_LEFT) { donutX = WALL_LEFT; donutVX *= -1; }
+      if (donutX > WALL_RIGHT) { donutX = WALL_RIGHT; donutVX *= -1; }
+      if (donutY < CEILING) { donutY = CEILING; donutVY *= -1; }
+
+      var paddleCenterX = 200 + catX;
+      var withinPaddle = Math.abs(donutX - paddleCenterX) < PADDLE_HALF_WIDTH;
+
+      if (donutVY > 0 && donutY >= PADDLE_Y && withinPaddle) {
+        donutY = PADDLE_Y;
+        donutVY = BOUNCE_VY;
+        var offset = (donutX - paddleCenterX) / PADDLE_HALF_WIDTH;
+        donutVX += offset * 2.4;
+        donutVX = Math.max(-5, Math.min(5, donutVX));
+      } else if (donutVY > 0 && donutY >= FLOOR) {
+        donutY = FLOOR;
+        donutVY *= -FLOOR_DAMPING;
+      }
+
+      donut.style.transform = 'translate(' + (donutX - 200) + 'px, ' + (donutY - 122) + 'px)';
+
+      var t = Math.max(0, Math.min(1, (FLOOR - donutY) / (FLOOR - CEILING)));
+      var scale = 1.3 - t * 0.8;
+      shadow.style.transform = 'translateX(' + (donutX - 200) + 'px) scale(' + scale + ', ' + (scale * 0.4) + ')';
+      shadow.style.opacity = 0.55 - t * 0.4;
+
+      requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  })();
+</script>
+</body></html>
