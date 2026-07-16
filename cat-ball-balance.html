@@ -184,8 +184,23 @@
     line-height: 1.1;
   }
 
+  .score-ui .level-value {
+    margin: 0.1rem 0 0;
+    font-size: 0.85rem;
+    opacity: 0.85;
+  }
+
+  .score-ui .level-value span {
+    color: var(--spotlight);
+    font-weight: 800;
+  }
+
+  .score-ui .level-value.checkpoint-flash {
+    animation: checkpointFlash 0.6s ease-out 1;
+  }
+
   .score-ui .best-value {
-    margin: 0;
+    margin: 0.15rem 0 0;
     font-size: 0.8rem;
     opacity: 0.7;
   }
@@ -193,6 +208,12 @@
   .score-ui .best-value span {
     color: var(--cream);
     font-weight: 800;
+  }
+
+  @keyframes checkpointFlash {
+    0%   { transform: scale(1); color: var(--spotlight); }
+    40%  { transform: scale(1.35); color: #fff2c9; }
+    100% { transform: scale(1); color: var(--spotlight); }
   }
 
   .game-over {
@@ -222,9 +243,38 @@
     color: var(--spotlight);
   }
 
-  .game-over-score, .game-over-best {
+  .game-over-score, .game-over-level, .game-over-best {
     margin: 0.15rem 0;
     font-size: 1.1rem;
+  }
+
+  .game-over-best {
+    font-size: 0.9rem;
+    opacity: 0.75;
+  }
+
+  .game-over-buttons {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    margin-top: 1.1rem;
+  }
+
+  .go-btn {
+    font: inherit;
+    font-weight: 700;
+    color: var(--cream);
+    background: rgba(251, 241, 226, 0.08);
+    border: 2px solid rgba(251, 241, 226, 0.35);
+    border-radius: 10px;
+    padding: 0.5rem 1.1rem;
+    cursor: pointer;
+  }
+
+  .go-btn.selected {
+    background: var(--spotlight);
+    border-color: var(--spotlight);
+    color: var(--ink);
   }
 
   .game-over-hint {
@@ -241,6 +291,7 @@
     <div class="score-ui">
       <p class="score-label">Height</p>
       <p class="score-value" id="scoreValue">0</p>
+      <p class="level-value" id="levelDisplay">Level <span id="levelValue">1</span></p>
       <p class="best-value">Best <span id="bestValue">0</span></p>
     </div>
 
@@ -248,15 +299,20 @@
       <div class="game-over-card">
         <p class="game-over-title">Game Over</p>
         <p class="game-over-score">Height: <span id="finalScore">0</span></p>
-        <p class="game-over-best">Best: <span id="finalBest">0</span></p>
-        <p class="game-over-hint">Press Space to try again</p>
+        <p class="game-over-level">Level: <span id="finalLevel">1</span></p>
+        <p class="game-over-best">Best Height: <span id="finalBest">0</span> &middot; Best Level: <span id="finalBestLevel">1</span></p>
+        <div class="game-over-buttons">
+          <button type="button" class="go-btn" id="continueBtn">Continue</button>
+          <button type="button" class="go-btn" id="restartBtn">Start Over</button>
+        </div>
+        <p class="game-over-hint">Space / click to confirm &middot; arrow keys to choose</p>
       </div>
     </div>
 
     <svg viewBox="0 0 1200 900" role="img" aria-label="A cartoon cat balancing a frosted donut on a procedural cat tower">
       <g id="world" transform="translate(400, 220)">
-      <rect x="-3370" y="-99700" width="3000" height="100030" fill="var(--wall)" opacity="0.55" />
-      <rect x="770" y="-99700" width="3000" height="100030" fill="var(--wall)" opacity="0.55" />
+      <rect x="-3370" y="-99700" width="3000" height="200000" fill="var(--wall)" opacity="0.55" />
+      <rect x="770" y="-99700" width="3000" height="200000" fill="var(--wall)" opacity="0.55" />
 
       <rect id="towerTrunk" x="185" y="330" width="30" height="0" fill="var(--trunk)" />
       <g id="platforms">
@@ -381,10 +437,16 @@
     var shelvesGroup = document.getElementById('shelves');
     var trunkEl = document.getElementById('towerTrunk');
     var scoreValueEl = document.getElementById('scoreValue');
+    var levelValueEl = document.getElementById('levelValue');
+    var levelDisplayEl = document.getElementById('levelDisplay');
     var bestValueEl = document.getElementById('bestValue');
     var finalScoreEl = document.getElementById('finalScore');
+    var finalLevelEl = document.getElementById('finalLevel');
     var finalBestEl = document.getElementById('finalBest');
+    var finalBestLevelEl = document.getElementById('finalBestLevel');
     var overlayEl = document.getElementById('gameOverOverlay');
+    var continueBtn = document.getElementById('continueBtn');
+    var restartBtn = document.getElementById('restartBtn');
 
     var facingLeft = false, facingLeftPrev = false;
 
@@ -397,13 +459,16 @@
     var WALL_LEFT = -370, WALL_RIGHT = 770;
     var PADDLE_HALF_WIDTH = 58, ANTICIPATE_DIST = 170;
     var GRAVITY = 0.08, BOUNCE_VY = -7.0;
-    var FALL_OUT_MARGIN = 130, GAME_OVER_DELAY = 1000;
     var CROUCH_MIN = 0.85, STRETCH_PEAK = 1.12;
 
     var PEDESTAL = { x: 200, y: 330, halfWidth: 550 };
     var LEVEL_GAP = 160, PLATFORM_MIN_HW = 55, PLATFORM_MAX_HW = 95, BRANCH_CHANCE = 0.28;
     var ARENA_LEFT = -130, ARENA_RIGHT = 530;
     var CENTER_SCREEN_Y = 460, CAT_ANCHOR_OFFSET = 90, CAMERA_EASE = 0.12;
+    var VIEWBOX_H = 900, OFFSCREEN_LOSE_TIMEOUT = 2000;
+
+    var DEN_SPACING = 300 * 8, DEN_HW = 120, DEN_BODY_HEIGHT = 180, DEN_DOOR_R = 58;
+    var DEN_BASE_HW = DEN_HW + 25, DEN_BASE_THICKNESS = 30;
 
     var catX = 0, catFeetY = 330, catVY = 0, catGrounded = true;
     var donutX = 200, donutY = 122, donutVX = 1.0, donutVY = 0, donutRotation = 0;
@@ -411,11 +476,18 @@
     var donutSquashY = 1;
     var cameraDY = 220;
     var lastLevelPlatforms = [PEDESTAL];
-    var fallTriggered = false;
+    var clearDenX = null;
+    var belowScreenSince = null;
     var platforms = [];
     var highestGeneratedY = 330;
+    var denThreshold = 330 - DEN_SPACING;
+    var denCounter = 0;
     var score = 0;
+    var level = 1;
+    var checkpoint = { level: 1, catFeetY: 330 };
+    var selectedAction = 'continue';
     var bestScore = parseInt(localStorage.getItem('donutBounceHighScore') || '0', 10);
+    var bestLevel = parseInt(localStorage.getItem('donutBounceHighLevel') || '1', 10);
     var gameOver = false;
 
     bestValueEl.textContent = bestScore;
@@ -436,7 +508,7 @@
       return null;
     }
 
-    function spawnPlatform(x, y, hw, support) {
+    function spawnSupportLines(x, y, support) {
       var els = [];
 
       if (support) {
@@ -464,6 +536,12 @@
       polesGroup.appendChild(branch);
       els.push(branch);
 
+      return els;
+    }
+
+    function spawnPlatform(x, y, hw, support) {
+      var els = spawnSupportLines(x, y, support);
+
       var rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
       rect.setAttribute('x', x - hw);
       rect.setAttribute('y', y - 9);
@@ -490,24 +568,102 @@
       return entry;
     }
 
+    function spawnDen(x, y, hw, support, levelNum) {
+      var els = spawnSupportLines(x, y, support);
+
+      var base = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      base.setAttribute('x', x - DEN_BASE_HW);
+      base.setAttribute('y', y - 9);
+      base.setAttribute('width', DEN_BASE_HW * 2);
+      base.setAttribute('height', DEN_BASE_THICKNESS);
+      base.setAttribute('rx', 10);
+      base.setAttribute('fill', 'var(--platform)');
+      shelvesGroup.appendChild(base);
+      els.push(base);
+
+      var baseEdge = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      baseEdge.setAttribute('x', x - DEN_BASE_HW);
+      baseEdge.setAttribute('y', y - 9);
+      baseEdge.setAttribute('width', DEN_BASE_HW * 2);
+      baseEdge.setAttribute('height', 6);
+      baseEdge.setAttribute('rx', 3);
+      baseEdge.setAttribute('fill', 'var(--platform-shade)');
+      baseEdge.setAttribute('opacity', '0.5');
+      shelvesGroup.appendChild(baseEdge);
+      els.push(baseEdge);
+
+      var body = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      body.setAttribute('x', x - hw);
+      body.setAttribute('y', y - DEN_BODY_HEIGHT);
+      body.setAttribute('width', hw * 2);
+      body.setAttribute('height', DEN_BODY_HEIGHT);
+      body.setAttribute('rx', 22);
+      body.setAttribute('fill', 'var(--platform)');
+      shelvesGroup.appendChild(body);
+      els.push(body);
+
+      var doorBottom = y;
+      var doorStraightTop = y - DEN_DOOR_R;
+      var door = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      door.setAttribute('d',
+        'M ' + (x - DEN_DOOR_R) + ' ' + doorBottom +
+        ' L ' + (x - DEN_DOOR_R) + ' ' + doorStraightTop +
+        ' A ' + DEN_DOOR_R + ' ' + DEN_DOOR_R + ' 0 0 1 ' + (x + DEN_DOOR_R) + ' ' + doorStraightTop +
+        ' L ' + (x + DEN_DOOR_R) + ' ' + doorBottom + ' Z');
+      door.setAttribute('fill', 'var(--stage-deep)');
+      shelvesGroup.appendChild(door);
+      els.push(door);
+
+      var entry = { x: x, y: y, halfWidth: DEN_BASE_HW, els: els, isDen: true, level: levelNum };
+      platforms.push(entry);
+      return entry;
+    }
+
+    function pickAvoidingX(hw, avoidX, minClear) {
+      if (avoidX === null) {
+        return ARENA_LEFT + hw + Math.random() * (ARENA_RIGHT - ARENA_LEFT - hw * 2);
+      }
+      var rightX = avoidX + minClear + hw;
+      var leftX = avoidX - minClear - hw;
+      var canRight = rightX + hw <= ARENA_RIGHT;
+      var canLeft = leftX - hw >= ARENA_LEFT;
+      if (canRight && canLeft) return Math.random() < 0.5 ? rightX : leftX;
+      if (canRight) return rightX;
+      if (canLeft) return leftX;
+      return Math.max(ARENA_LEFT + hw, Math.min(ARENA_RIGHT - hw, rightX));
+    }
+
     function generatePlatformsUpTo(targetY) {
       while (highestGeneratedY > targetY) {
         highestGeneratedY -= LEVEL_GAP;
         var thisLevel = [];
-        var branchLevel = Math.random() < BRANCH_CHANCE;
 
-        var hw1 = PLATFORM_MIN_HW + Math.random() * (PLATFORM_MAX_HW - PLATFORM_MIN_HW);
-        var x1 = ARENA_LEFT + hw1 + Math.random() * (ARENA_RIGHT - ARENA_LEFT - hw1 * 2);
-        thisLevel.push(spawnPlatform(x1, highestGeneratedY, hw1, findSupport(x1, lastLevelPlatforms)));
+        if (highestGeneratedY <= denThreshold) {
+          denThreshold -= DEN_SPACING;
+          denCounter++;
+          var denX = ARENA_LEFT + DEN_BASE_HW + Math.random() * (ARENA_RIGHT - ARENA_LEFT - DEN_BASE_HW * 2);
+          thisLevel.push(spawnDen(denX, highestGeneratedY, DEN_HW, findSupport(denX, lastLevelPlatforms), denCounter + 1));
+          clearDenX = denX;
+        } else {
+          var branchLevel = Math.random() < BRANCH_CHANCE;
+          var minClear = DEN_BASE_HW + 60;
 
-        if (branchLevel) {
-          var hw2 = PLATFORM_MIN_HW + Math.random() * (PLATFORM_MAX_HW - PLATFORM_MIN_HW);
-          var x2, tries = 0;
-          do {
-            x2 = ARENA_LEFT + hw2 + Math.random() * (ARENA_RIGHT - ARENA_LEFT - hw2 * 2);
-            tries++;
-          } while (Math.abs(x2 - x1) < (hw1 + hw2 + 70) && tries < 8);
-          thisLevel.push(spawnPlatform(x2, highestGeneratedY, hw2, findSupport(x2, lastLevelPlatforms)));
+          var hw1 = PLATFORM_MIN_HW + Math.random() * (PLATFORM_MAX_HW - PLATFORM_MIN_HW);
+          var x1 = pickAvoidingX(hw1, clearDenX, minClear);
+          thisLevel.push(spawnPlatform(x1, highestGeneratedY, hw1, findSupport(x1, lastLevelPlatforms)));
+
+          if (branchLevel) {
+            var hw2 = PLATFORM_MIN_HW + Math.random() * (PLATFORM_MAX_HW - PLATFORM_MIN_HW);
+            var x2, tries = 0;
+            do {
+              x2 = ARENA_LEFT + hw2 + Math.random() * (ARENA_RIGHT - ARENA_LEFT - hw2 * 2);
+              tries++;
+            } while ((Math.abs(x2 - x1) < (hw1 + hw2 + 70) ||
+                     (clearDenX !== null && Math.abs(x2 - clearDenX) < (DEN_BASE_HW + hw2 + 60))) && tries < 8);
+            thisLevel.push(spawnPlatform(x2, highestGeneratedY, hw2, findSupport(x2, lastLevelPlatforms)));
+          }
+
+          clearDenX = null;
         }
 
         lastLevelPlatforms = thisLevel;
@@ -537,30 +693,66 @@
           catFeetY = p.y;
           catVY = 0;
           catGrounded = true;
+          if (p.isDen && p.level > checkpoint.level) {
+            checkpoint = { level: p.level, catFeetY: p.y };
+            level = p.level;
+            levelValueEl.textContent = level;
+            pulse(levelDisplayEl, 'checkpoint-flash', 600);
+          }
           return;
         }
       }
     }
 
-    function resetGame() {
-      catX = 0; catFeetY = 330; catVY = 0; catGrounded = true;
-      donutX = 200; donutY = 122; donutVX = 1.0; donutVY = 0; donutRotation = 0;
+    function resumeCommon(atFeetY) {
+      catX = 0; catFeetY = atFeetY; catVY = 0; catGrounded = true;
+      donutX = 200; donutY = atFeetY - HEAD_OFFSET; donutVX = 1.0; donutVY = 0; donutRotation = 0;
       bodyScaleY = 1;
       donutSquashY = 1;
-      cameraDY = 220;
-      score = 0;
       facingLeft = false; facingLeftPrev = false;
+      belowScreenSince = null;
+      var catAnchorY = atFeetY - CAT_ANCHOR_OFFSET;
+      cameraDY = CENTER_SCREEN_Y - catAnchorY;
+      worldEl.setAttribute('transform', 'translate(400,' + cameraDY + ')');
+      gameOver = false;
+      overlayEl.classList.remove('visible');
+    }
+
+    function continueFromCheckpoint() {
+      level = checkpoint.level;
+      levelValueEl.textContent = level;
+      resumeCommon(checkpoint.catFeetY);
+    }
+
+    function startOver() {
+      score = 0;
+      level = 1;
+      checkpoint = { level: 1, catFeetY: 330 };
       prunePlatforms(-Infinity);
       highestGeneratedY = 330;
+      denThreshold = 330 - DEN_SPACING;
+      denCounter = 0;
+      clearDenX = null;
       lastLevelPlatforms = [PEDESTAL];
       trunkEl.setAttribute('y', 330);
       trunkEl.setAttribute('height', 0);
-      worldEl.setAttribute('transform', 'translate(400,' + cameraDY + ')');
       scoreValueEl.textContent = '0';
-      gameOver = false;
-      fallTriggered = false;
-      overlayEl.classList.remove('visible');
+      levelValueEl.textContent = '1';
+      resumeCommon(330);
     }
+
+    function updateButtonSelection() {
+      continueBtn.classList.toggle('selected', selectedAction === 'continue');
+      restartBtn.classList.toggle('selected', selectedAction === 'restart');
+    }
+
+    function confirmSelection() {
+      if (selectedAction === 'continue') continueFromCheckpoint();
+      else startOver();
+    }
+
+    continueBtn.addEventListener('click', function () { selectedAction = 'continue'; confirmSelection(); });
+    restartBtn.addEventListener('click', function () { selectedAction = 'restart'; confirmSelection(); });
 
     function triggerGameOver() {
       gameOver = true;
@@ -568,19 +760,41 @@
         bestScore = score;
         localStorage.setItem('donutBounceHighScore', String(bestScore));
       }
+      if (level > bestLevel) {
+        bestLevel = level;
+        localStorage.setItem('donutBounceHighLevel', String(bestLevel));
+      }
       finalScoreEl.textContent = score;
+      finalLevelEl.textContent = level;
       finalBestEl.textContent = bestScore;
+      finalBestLevelEl.textContent = bestLevel;
       bestValueEl.textContent = bestScore;
+      selectedAction = 'continue';
+      updateButtonSelection();
       overlayEl.classList.add('visible');
     }
 
     window.addEventListener('keydown', function (e) {
+      if (gameOver) {
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+          e.preventDefault();
+          selectedAction = selectedAction === 'continue' ? 'restart' : 'continue';
+          updateButtonSelection();
+          return;
+        }
+        if (e.key === ' ' || e.code === 'Space') {
+          e.preventDefault();
+          if (e.repeat) return;
+          confirmSelection();
+          return;
+        }
+        return;
+      }
       if (e.key === 'ArrowLeft') { keys.left = true; e.preventDefault(); return; }
       if (e.key === 'ArrowRight') { keys.right = true; e.preventDefault(); return; }
       if (e.key === ' ' || e.code === 'Space') {
         e.preventDefault();
         if (e.repeat) return;
-        if (gameOver) { resetGame(); return; }
         if (catGrounded) { catVY = JUMP_VY; catGrounded = false; }
       }
     });
@@ -624,7 +838,7 @@
         facingLeftPrev = facingLeft;
         tailFlipEl.setAttribute('transform', facingLeft ? 'translate(400,0) scale(-1,1)' : '');
 
-        var approaching = !fallTriggered && donutVY > 0 && withinPaddle &&
+        var approaching = donutVY > 0 && withinPaddle &&
           donutY >= paddleY - ANTICIPATE_DIST && donutY <= paddleY + 6;
         if (approaching) {
           var p = Math.min(1, Math.max(0, 1 - (paddleY - donutY) / ANTICIPATE_DIST));
@@ -644,7 +858,7 @@
 
         var visualPaddleY = catFeetY - HEAD_OFFSET * bodyScaleY;
 
-        if (!fallTriggered && donutVY > 0 && donutY >= visualPaddleY && withinPaddle) {
+        if (donutVY > 0 && donutY >= visualPaddleY && withinPaddle) {
           bodyScaleY = STRETCH_PEAK;
           visualPaddleY = catFeetY - HEAD_OFFSET * bodyScaleY;
           donutY = visualPaddleY;
@@ -684,9 +898,15 @@
         cameraDY += (targetCameraDY - cameraDY) * CAMERA_EASE;
         worldEl.setAttribute('transform', 'translate(400,' + cameraDY + ')');
 
-        if (!fallTriggered && donutY > PEDESTAL.y + FALL_OUT_MARGIN) {
-          fallTriggered = true;
-          setTimeout(triggerGameOver, GAME_OVER_DELAY);
+        var donutScreenY = donutY + cameraDY;
+        if (donutY > catFeetY && donutScreenY > VIEWBOX_H) {
+          if (belowScreenSince === null) {
+            belowScreenSince = performance.now();
+          } else if (performance.now() - belowScreenSince > OFFSCREEN_LOSE_TIMEOUT) {
+            triggerGameOver();
+          }
+        } else {
+          belowScreenSince = null;
         }
       }
 
